@@ -10,7 +10,7 @@ use App\Medico;
 use App\Paciente;
 use App\Usuario;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Database\Eloquent\Model;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -29,16 +29,17 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 /*==========================
  * LOGIN
  ===========================*/
-//http://127.0.0.1:8000/api/users?dni=45589149&password=123456&tipo=1
-/*Route::get('users',function (Request $request){
-
-	$dni = $request->input('dni');
-	$pass = $request->input('password');
+//http://127.0.0.1:8000/api/login
+Route::post('/login', function (Request $request) {
+    
+    $dni = $request->input('dni');
+	$pass = $request->input('pass');
 	$tipo = $request->input('tipo');
 
 	switch ($tipo) {
 		case 1:
 			$consulta = Paciente::where('dni',$dni)->first();
+			
 			break;
 		case 2:
 			$consulta = Medico::where('dni',$dni)->first();
@@ -47,35 +48,92 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 			$consulta = Empleado::where('dni',$dni)->first();
 			break;
 	}
-	$response["dato"]=array('dato' => $consulta);
+
 	if ($consulta) {
-			echo json_encode($response["dato"]);
+		if($pass == $consulta->password){
+	        $response["dato"]=array('estado' => 200,'dato' => $consulta);
+	        echo json_encode($response["dato"]);
+	    }else{
+	        //header('Status: 400', TRUE, 400);
+	        $response["dato"]=array('estado' => 400,'message' =>'Contraseña no coincide' );
+	        echo json_encode($response["dato"]);
+	    }	
+	}else{
+	    //header('Status: 400', TRUE, 400);
+	    $response["dato"]=array('estado' => 400,'message' =>'Usuario no encontrado' );
+	    echo json_encode($response["dato"]);
 	}	
 	
-});*/
+});
 
-Route::post('/login', function (Request $request) {
-	return json_encode($request->getContent(), true);
-	/*$dni = $request->input('dni');
-	$pass = $request->input('password');
+/*==========================
+ * REGISTRO
+ ===========================*/
+//http://127.0.0.1:8000/api/register
+Route::post('/register', function (Request $request) {
+    
+    $names = $request->input('names');
+    $lastnames = $request->input('lastnames');
+    $dni = $request->input('dni');
+	$pass = $request->input('pass');
 	$tipo = $request->input('tipo');
-
+	$tel = $request->input('tel');
+    
 	switch ($tipo) {
 		case 1:
-			$consulta = Paciente::where('dni',$dni)->first();
+		    $consulta = Paciente::where("dni",$dni)->get();
+		    
+		    if(count($consulta)>0){
+		        
+		        $response["dato"]=array('estado' => 400,'message' =>'Paciente ya registrado');
+	            echo json_encode($response["dato"]);
+		    }else{
+		        $obj = new Paciente();
+    			$obj->nombres = $names;
+    			$obj->apellidos = $lastnames;
+    			$obj->dni = $dni;
+    			$obj->telefono = $tel;
+    			$obj->password = $pass; 
+    			$obj->usuario_id = intval($tipo);
+    			
+    			if($obj->save()){
+    			    return $response["dato"]=array('estado' => 200,'dato' => $obj);
+    	            echo json_encode($response["dato"]);
+    			}else{
+    			    $response["dato"]=array('estado' => 400,'message' =>'No se ha guardado el usuario' );
+    	            echo json_encode($response["dato"]);
+    			}
+		    }
+			
 			break;
 		case 2:
-			$consulta = Medico::where('dni',$dni)->first();
+			$consulta = Medico::where("dni",$dni)->get();
+		    
+		    if(count($consulta)>0){
+		        
+		        $response["dato"]=array('estado' => 400,'message' =>'Medico ya registrado');
+	            echo json_encode($response["dato"]);
+		    }else{
+		        $obj = new Medico();
+    			$obj->nombres = $names;
+    			$obj->apellidos = $lastnames;
+    			$obj->dni = $dni;
+    			$obj->telefono = $tel;
+    			$obj->password = $pass; 
+    			$obj->usuario_id = intval($tipo);
+    			
+    			if($obj->save()){
+    			    return $response["dato"]=array('estado' => 200,'dato' => $obj);
+    	            echo json_encode($response["dato"]);
+    			}else{
+    			    $response["dato"]=array('estado' => 400,'message' =>'No se ha guardado el usuario' );
+    	            echo json_encode($response["dato"]);
+    			}
+		    }
 			break;
-		case 3:
-			$consulta = Empleado::where('dni',$dni)->first();
-			break;
+		
 	}
-	$response["dato"]=array('dato' => $consulta);
-	if ($consulta) {
-			echo json_encode($response["dato"]);
-	}	*/
-	
+
 });
 
 /*==================================
