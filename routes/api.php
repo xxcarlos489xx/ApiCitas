@@ -157,13 +157,19 @@ Route::post('/register', function (Request $request) {
  * LISTADO DE CITAS, POR PACIENTE
  ===================================*/
 // http://127.0.0.1:8000/api/citas/1
-Route::get('/citas/{id}',function ($id, Request $request){
+Route::get('/citas/{paciente_id}',function ($paciente_id, Request $request){
 
 	$consulta = DB::table('cita')
-                   	->select('especialidad_id','fecha','hora')
-                   	->where('paciente_id', $id)
+                    ->join('especialidad', 'cita.especialidad_id', '=', 'especialidad.id')
+                    ->join('medico', 'cita.medico_id', '=', 'medico.id')
+                    ->join('consultorio', 'cita.consultorio_id', '=', 'consultorio.id')
+                    ->join('rango_horas', 'cita.rangohora_id', '=', 'rango_horas.id')
+                    ->join('estado', 'cita.estado', '=', 'estado.id')
+                    ->select(   'cita.id','medico.nombres as nombreMedico','medico.apellidos as apellidoMedico',
+                                'especialidad.nombre as especialidad','consultorio.descripcion as consultorio',
+                                'estado.tipo as estado','cita.fecha','rango_horas.rango as rangoHora')
+                    ->where('cita.paciente_id','=',$paciente_id)
                     ->get();
-
 	$response["dato"]=array('dato' => $consulta);
 
 	if ($consulta) {
@@ -223,7 +229,7 @@ Route::get('/medicos/{id}',function ($id){
 /*==============================================
  * SPINNER LISTA CONSULTORIOS
  ==============================================*/
-//http://127.0.0.1:8000/api/consultorios/1/1
+//https://citas.dmqvirucida.com.pe/api/consultorios/1/1
 Route::get('/consultorios/{numero}/{id}',function ($numero,$id){
 
 	$consulta = Consultorio::select('id','letra','descripcion')
@@ -241,7 +247,7 @@ Route::get('/consultorios/{numero}/{id}',function ($numero,$id){
 /*==============================================
  * GENERAR CITA
  ==============================================*/
-
+//https://citas.dmqvirucida.com.pe/reserva
 Route::post('/reserva',function (Request $request){    
 	$id_usuario = $request->input("paciente"); 	
 	$id_medico = $request->input("medico");
@@ -249,10 +255,6 @@ Route::post('/reserva',function (Request $request){
 	$id_especialidad = $request->input("especialidad");
 	$fecha = $request->input("fecha");
 	$hora = $request->input("hora");
-    
-
-
-
 
     $consultaFecha = Cita::where('fecha',$fecha)
                             ->where('medico_id',$id_medico)
@@ -269,10 +271,10 @@ Route::post('/reserva',function (Request $request){
 
         for ($i=0; $i < count($consultaFecha); $i++) { 
         	if ($consultaFecha[$i]->paciente_id == intval($id_usuario)) {
-        		$rangoHora = RangoHora::where('id',intval($hora))->first();
+        	    
+        		$rangoHora = RangoHora::where('id',intval($consultaFecha[$i]->rangohora_id))->first();
         		$rangoHora = $rangoHora->rango;
-        		$message = 'Ya tiene una cita reservada para la fecha '+ $consultaFecha[$i]->fecha + 'en el horario de '
-        					+ $rangoHora;
+        		$message = "Ya tiene una cita reservada para la fecha ".$consultaFecha[$i]->fecha." en el horario de ".$rangoHora;
         		$response["dato"]=array('estado' => 400,'message' =>$message);
     			echo json_encode($response["dato"]);
     			return;
